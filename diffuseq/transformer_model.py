@@ -1,6 +1,6 @@
 from transformers import AutoConfig
 # from transformers import BertEncoder
-from transformers.models.bert.modeling_bert import BertEncoder, BertModel
+
 import torch
 
 import numpy as np
@@ -13,6 +13,8 @@ from .utils.nn import (
     linear,
     timestep_embedding,
 )
+
+from .godcaster_encoder import GodCasterEncoder
 
 class TransformerNetModel(nn.Module):
     """
@@ -32,9 +34,10 @@ class TransformerNetModel(nn.Module):
         input_dims,
         output_dims,
         hidden_t_dim,
+        video_shape,
         dropout=0,
         config=None,
-        config_name='bert-base-uncased',
+        config_name='allenai/longformer-base-4096',
         vocab_size=None,
         init_pretrained='no',
         logits_mode=1,
@@ -52,6 +55,8 @@ class TransformerNetModel(nn.Module):
         self.logits_mode = logits_mode
         self.hidden_size = config.hidden_size
 
+        self.video_shape = video_shape
+
         self.word_embedding = nn.Embedding(vocab_size, self.input_dims)
         self.lm_head = nn.Linear(self.input_dims, vocab_size)
         with th.no_grad():
@@ -68,34 +73,11 @@ class TransformerNetModel(nn.Module):
             self.input_up_proj = nn.Sequential(nn.Linear(input_dims, config.hidden_size),
                                               nn.Tanh(), nn.Linear(config.hidden_size, config.hidden_size))
         
-        if init_pretrained == 'bert':
-            print('initializing from pretrained bert...')
-            print(config)
-            temp_bert = BertModel.from_pretrained(config_name, config=config)
+        self.input_transformers = GodCasterEncoder(config, self.video_shape)
 
-            self.word_embedding = temp_bert.embeddings.word_embeddings
-            with th.no_grad():
-                self.lm_head.weight = self.word_embedding.weight
-            # self.lm_head.weight.requires_grad = False
-            # self.word_embedding.weight.requires_grad = False
-            
-            self.input_transformers = temp_bert.encoder
-            self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
-            self.position_embeddings = temp_bert.embeddings.position_embeddings
-            self.LayerNorm = temp_bert.embeddings.LayerNorm
-
-            del temp_bert.embeddings
-            del temp_bert.pooler
-
-        elif init_pretrained == 'no':
-            self.input_transformers = BertEncoder(config)
-
-            self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
-            self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-            self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        
-        else:
-            assert False, "invalid type of init_pretrained"
+        self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
+        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -124,7 +106,7 @@ class TransformerNetModel(nn.Module):
             raise NotImplementedError
 
 
-    def forward(self, x, timesteps):
+    def forward(self, x, timesteps, video):
         """
         Apply the model to an input batch.
 
@@ -145,7 +127,7 @@ class TransformerNetModel(nn.Module):
         emb_inputs = self.position_embeddings(position_ids) + emb_x + emb_t.unsqueeze(1).expand(-1, seq_length, -1)
         emb_inputs = self.dropout(self.LayerNorm(emb_inputs))
 
-        input_trans_hidden_states = self.input_transformers(emb_inputs).last_hidden_state
+        input_trans_hidden_states = self.input_transformers(emb_inputs, video).last_hidden_state
         
         if self.output_dims != self.hidden_size:
             h = self.output_down_proj(input_trans_hidden_states)
