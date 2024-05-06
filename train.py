@@ -18,7 +18,7 @@ from basic_utils import (
 )
 from train_util import TrainLoop
 from transformers import set_seed
-from transformers import VivitImageProcessor, VivitModel
+from transformers import VivitImageProcessor, VivitModel, VivitConfig
 import wandb
 
 ### custom your wandb setting here ###
@@ -69,13 +69,15 @@ def main():
 
     vivit_processor = VivitImageProcessor.from_pretrained(args.vivit_model)
 
-    vivit_model = VivitModel.from_pretrained(args.vivit_model).to(dist_util.dev())
+    vivit_config = VivitConfig.from_pretrained(args.vivit_model)
+
+    vivit_model = VivitModel(config=vivit_config).to("cuda:1")
 
     # print('#'*30, 'CUDA_VISIBLE_DEVICES', os.environ['CUDA_VISIBLE_DEVICES'])
 
     model_diffusion_args = args_to_dict(args, load_defaults_config().keys())
 
-    seq_len = (230 // vivit_model.config.tubelet_size[0]) * (224 // vivit_model.config.tubelet_size[1]) * (224 // vivit_model.config.tubelet_size[2])
+    seq_len = (32 // vivit_model.config.tubelet_size[0]) * (224 // vivit_model.config.tubelet_size[1]) * (224 // vivit_model.config.tubelet_size[2])
 
     model_diffusion_args["video_shape"] = [seq_len, vivit_model.config.hidden_size]
 
@@ -83,7 +85,7 @@ def main():
         **model_diffusion_args
     )
     # print('#'*30, 'cuda', dist_util.dev())
-    model.to(dist_util.dev()) #  DEBUG **
+    model.to("cuda:0") #  DEBUG **
     # model.cuda() #  DEBUG **
 
     pytorch_total_params = sum(p.numel() for p in model.parameters())
