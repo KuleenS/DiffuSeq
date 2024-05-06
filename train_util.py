@@ -33,6 +33,8 @@ class TrainLoop:
         *,
         model,
         diffusion,
+        vivit_processor,
+        vivit_model,
         data,
         batch_size,
         microbatch,
@@ -53,6 +55,8 @@ class TrainLoop:
     ):
         self.model = model
         self.diffusion = diffusion
+        self.vivit_processor = vivit_processor
+        self.vivit_model = vivit_model
         self.data = data
         self.eval_data = eval_data
         self.batch_size = batch_size
@@ -175,6 +179,15 @@ class TrainLoop:
             or self.step + self.resume_step < self.learning_steps
         ):
             batch, cond = next(self.data)
+
+            video_frames = th.stack([x.squeeze() for x in cond["video"]])
+
+            inputs = self.vivit_processor(video_frames)
+
+            outputs = self.vivit_model(**inputs)
+
+            cond["video"] = outputs.last_hidden_state
+
             self.run_step(batch, cond)
             if self.step % self.log_interval == 0:
                 logger.dumpkvs()
