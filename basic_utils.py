@@ -101,7 +101,7 @@ def load_defaults_config():
     """
     Load defaults for training args.
     """
-    with open('/home/cometku/code/model-godcaster/DiffuSeq/diffuseq/config.json', 'r') as f:
+    with open('/scratch/kxu39/DiffuSeq/diffuseq/config.json', 'r') as f:
         return json.load(f)
 
 
