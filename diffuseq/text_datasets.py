@@ -6,7 +6,7 @@ import math
 
 from typing import List
 
-import cv2
+import av
 
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
@@ -201,13 +201,13 @@ class TextDataset(Dataset):
     def sample_frame_indices(self, frame_length_of_clip, FPS):
         initial_rate = FPS // 5
 
-        ret = [i*initial_rate for i in range(50)]
+        ret = [i*initial_rate for i in range(16)]
 
         new_tot = frame_length_of_clip - math.ceil(10 * FPS)
         
-        first_third = np.ceil(np.linspace(0, new_tot // 3, num=90) + math.ceil(10 * FPS))
+        first_third = np.ceil(np.linspace(0, new_tot // 3, num=8) + math.ceil(10 * FPS))
 
-        second_third = np.ceil(np.linspace(new_tot//3, new_tot, num=90) + math.ceil(10 * FPS))
+        second_third = np.ceil(np.linspace(new_tot//3, new_tot, num=8) + math.ceil(10 * FPS))
 
         return ret + list(first_third) + list(second_third)
 
@@ -226,17 +226,17 @@ class TextDataset(Dataset):
         
         if self.text_datasets['train'][idx]["video_path"] != self.video_container_path:
         
-            self.video_container = cv2.VideoCapture(self.text_datasets['train'][idx]["video_path"])
+            self.video_container = av.open(self.text_datasets['train'][idx]["video_path"])
             self.video_container_path = self.text_datasets['train'][idx]["video_path"]
 
-        FPS = self.video_container.get(cv2.CAP_PROP_FPS)
+        FPS = self.video_container.streams[0].average_rate
 
         sentence_start_frame = math.ceil(self.text_datasets['train'][idx]["start"] * FPS)
 
-        if sentence_start_frame < 230:
-            num_copies = 230//sentence_start_frame
+        if sentence_start_frame < 32:
+            num_copies = 32//sentence_start_frame
 
-            left_over = 230 % sentence_start_frame
+            left_over = 32 % sentence_start_frame
 
             indicies = [0]*(num_copies + left_over)
 
@@ -244,22 +244,27 @@ class TextDataset(Dataset):
                 indicies += [i]*num_copies
 
         elif sentence_start_frame < FPS * 60:
-            indicies = list(np.linspace(0, sentence_start_frame, num=230))
+            indicies = list(np.ceil(np.linspace(0, sentence_start_frame, num=32)))
         else:
-            indicies = self.sample_frame_indices(sentence_start_frame, FPS)
+            indicies = np.ceil(self.sample_frame_indices(sentence_start_frame, FPS))
 
-        indicies = [sentence_start_frame-x for x in indicies][::-1]
+        indicies = [int(sentence_start_frame-x) for x in indicies][::-1]
 
         frames = []
 
-        for index in indicies:
-            self.video_container.set(cv2.CAP_PROP_POS_FRAMES, index)
+        self.video_container.seek(0)
 
-            _, frame = self.video_container.read()
+        start_index = indicies[0]
 
-            frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        end_index = indicies[-1]
 
-        out_kwargs["video"] = frames
+        for i, frame in enumerate(self.video_container.decode(video=0)):
+            if i > end_index:
+                break
+            if i >= start_index and i in indicies:
+                frames.append(frame)
+
+        out_kwargs["video"] = np.stack([x.to_ndarray(format="rgb24") for x in frames])
 
         return arr, out_kwargs
 
@@ -273,3 +278,14 @@ def _collate_batch_helper(examples, pad_token_id, max_length, return_mask=False)
     if return_mask:
         return result, mask_
     return result
+
+def read_video_pyav(container, indices):
+    '''
+    Decode the video with PyAV decoder.
+    Args:
+        container (`av.container.input.InputContainer`): PyAV container.
+        indices (`List[int]`): List of frame indices to decode.
+    Returns:
+        result (np.ndarray): np array of decoded frames of shape (num_frames, height, width, 3).
+    '''
+    
