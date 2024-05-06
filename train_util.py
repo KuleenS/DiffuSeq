@@ -180,13 +180,13 @@ class TrainLoop:
         ):
             batch, cond = next(self.data)
 
-            video_frames = th.stack([x.squeeze() for x in cond["video"]])
+            video_frames = cond["video"].squeeze().numpy().astype(np.uint8)
 
-            inputs = self.vivit_processor(video_frames)
+            inputs = self.vivit_processor(list(video_frames), return_tensors="pt").to("cuda:1")
 
             outputs = self.vivit_model(**inputs)
 
-            cond["video"] = outputs.last_hidden_state
+            cond["video"] = outputs.last_hidden_state.to("cuda:0")
 
             self.run_step(batch, cond)
             if self.step % self.log_interval == 0:
