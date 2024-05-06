@@ -18,6 +18,7 @@ from basic_utils import (
 )
 from train_util import TrainLoop
 from transformers import set_seed
+from transformers import VivitImageProcessor, VivitModel
 import wandb
 
 ### custom your wandb setting here ###
@@ -44,16 +45,18 @@ def main():
     data = load_data_text(
         batch_size=args.batch_size,
         seq_len=args.seq_len,
+        folder = args.data_folder,
         data_args = args,
         loaded_vocab=tokenizer,
         model_emb=model_weight # use model's weights as init
     )
-    next(data)
+    # next(data)
 
     data_valid = load_data_text(
         batch_size=args.batch_size,
         seq_len=args.seq_len,
         data_args=args,
+        folder = args.data_folder,
         split='valid',
         deterministic=True,
         loaded_vocab=tokenizer,
@@ -63,9 +66,21 @@ def main():
     print('#'*30, 'size of vocab', args.vocab_size)
 
     logger.log("### Creating model and diffusion...")
+
+    vivit_processor = VivitImageProcessor.from_pretrained(args.vivit_model)
+
+    vivit_model = VivitModel.from_pretrained(args.vivit_model).to(dist_util.dev())
+
     # print('#'*30, 'CUDA_VISIBLE_DEVICES', os.environ['CUDA_VISIBLE_DEVICES'])
+
+    model_diffusion_args = args_to_dict(args, load_defaults_config().keys())
+
+    seq_len = (230 // vivit_model.config.tubelet_size[0]) * (224 // vivit_model.config.tubelet_size[1]) * (224 // vivit_model.config.tubelet_size[2])
+
+    model_diffusion_args["video_shape"] = [seq_len, vivit_model.config.hidden_size]
+
     model, diffusion = create_model_and_diffusion(
-        **args_to_dict(args, load_defaults_config().keys())
+        **model_diffusion_args
     )
     # print('#'*30, 'cuda', dist_util.dev())
     model.to(dist_util.dev()) #  DEBUG **
@@ -89,9 +104,13 @@ def main():
 
     logger.log("### Training...")
 
+    
+
     TrainLoop(
         model=model,
         diffusion=diffusion,
+        vivit_processor = vivit_processor,
+        vivit_model = vivit_model,
         data=data,
         batch_size=args.batch_size,
         microbatch=args.microbatch,
