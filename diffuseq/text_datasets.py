@@ -1,17 +1,26 @@
-# import blobfile as bf
+import os
+
+import json
+
+import math
+
+from typing import List
+
+import cv2
+
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
 
 import torch
 import json
-import psutil
 import datasets
 from datasets import Dataset as Dataset2
 
 def load_data_text(
     batch_size, 
     seq_len, 
+    folder,
     deterministic=False, 
     data_args=None, 
     model_emb=None,
@@ -37,7 +46,7 @@ def load_data_text(
 
     print('#'*30, '\nLoading text data...')
 
-    training_data = get_corpus(data_args, seq_len, split=split, loaded_vocab=loaded_vocab)
+    training_data = get_corpus(data_args, seq_len, folder=os.path.join(folder, split), loaded_vocab=loaded_vocab)
 
     dataset = TextDataset(
         training_data,
@@ -53,7 +62,7 @@ def load_data_text(
             # drop_last=True,
             sampler=sampler,
             # shuffle=not deterministic,
-            num_workers=4,
+            # num_workers=4,
         )
     else:
         data_loader = DataLoader(
@@ -62,7 +71,7 @@ def load_data_text(
             # drop_last=True,
             # sampler=sampler,
             shuffle=not deterministic,
-            num_workers=4,
+            # num_workers=4,
         )
 
     if loop:
@@ -77,29 +86,22 @@ def infinite_loader(data_loader):
 
 def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     # Process.memory_info is expressed in bytes, so convert to megabytes
-    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
     raw_datasets = Dataset2.from_dict(sentence_lst)
-    print(raw_datasets)
-    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
 
     def tokenize_function(examples):
         input_id_x = vocab_dict.encode_token(examples['src'])
         input_id_y = vocab_dict.encode_token(examples['trg'])
-        result_dict = {'input_id_x': input_id_x, 'input_id_y': input_id_y}
+        result_dict = {'input_id_x': input_id_x, 'input_id_y': input_id_y, 'video_path': examples['video_path'], 'start': examples['start']}
 
         return result_dict
 
     tokenized_datasets = raw_datasets.map(
         tokenize_function,
         batched=True,
-        num_proc=4,
         remove_columns=['src', 'trg'],
         load_from_cache_file=True,
         desc="Running tokenizer on dataset",
     )
-    print('### tokenized_datasets', tokenized_datasets)
-    print('### tokenized_datasets...example', tokenized_datasets['input_id_x'][0])
-    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
 
     def merge_and_mask(group_lst):
         lst = []
@@ -128,7 +130,6 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     tokenized_datasets = tokenized_datasets.map(
         merge_and_mask,
         batched=True,
-        num_proc=1,
         desc=f"merge and mask",
     )
     
@@ -138,53 +139,47 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
         group_lst['input_mask'] = _collate_batch_helper(group_lst['input_mask'], 1, max_length)
         return group_lst
 
-    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
-
     lm_datasets = tokenized_datasets.map(
         pad_function,
         batched=True,
-        num_proc=1,
         desc=f"padding",
     )
 
-    print(lm_datasets, 'padded dataset')
-    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
-
     raw_datasets = datasets.DatasetDict()
     raw_datasets['train'] = lm_datasets
-    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
     return raw_datasets
 
+def read_folder(folder: str, ext: str) -> List[str]:
+    total_files = [] 
 
-def get_corpus(data_args, seq_len, split='train', loaded_vocab=None):
+    for root, dirs, files in os.walk(folder):
+        for name in files:
+            if ext in name:
+                total_files.append(os.path.join(root, name))
+    
+    return total_files
+
+def get_corpus(data_args, seq_len, folder, loaded_vocab=None):
 
     print('#'*30, '\nLoading dataset {} from {}...'.format(data_args.dataset, data_args.data_dir))
 
-    sentence_lst = {'src':[], 'trg': []}
-    
-    if split == 'train':
-        print('### Loading form the TRAIN set...')
-        path = f'{data_args.data_dir}/train.jsonl'
-    elif split == 'valid':
-        print('### Loading form the VALID set...')
-        path = f'{data_args.data_dir}/valid.jsonl'
-    elif split == 'test':
-        print('### Loading form the TEST set...')
-        path = f'{data_args.data_dir}/test.jsonl'
-    else:
-        assert False, "invalid split for dataset"
+    sentence_lst = {'src':[], 'video_path': [], 'start': [], 'trg': []}
 
-    with open(path, 'r') as f_reader:
-        for row in f_reader:
-            content = json.loads(row)
-            sentence_lst['src'].append(content['src'].strip())
-            sentence_lst['trg'].append(content['trg'].strip())
+    video_files = sorted(read_folder(folder, ".mp4"))
 
-    print('### Data samples...\n', sentence_lst['src'][:2], sentence_lst['trg'][:2])
-        
-    # get tokenizer.
+    caption_files = [x.split(".")[0]+"_cleaned.json" for x in video_files]
+
+    for video_file, caption_file in zip(video_files, caption_files):
+        with open(caption_file, "r") as f:
+            data = json.load(f)
+        for i in range(1, len(data)):
+            sentence_lst["src"].append(" ".join([x["text"] for x in data[:i]]))
+            sentence_lst["trg"].append(data[i]["text"])
+            sentence_lst["start"].append(data[i]["start"])
+            sentence_lst["video_path"].append(video_file)
+
     vocab_dict = loaded_vocab
-
+    
     train_dataset = helper_tokenize(sentence_lst, vocab_dict, seq_len)
     return train_dataset
 
@@ -197,8 +192,24 @@ class TextDataset(Dataset):
         self.data_args = data_args
         self.model_emb = model_emb
 
+        self.video_container = None
+        self.video_container_path = None
+
     def __len__(self):
         return self.length
+
+    def sample_frame_indices(self, frame_length_of_clip, FPS):
+        initial_rate = FPS // 5
+
+        ret = [i*initial_rate for i in range(50)]
+
+        new_tot = frame_length_of_clip - math.ceil(10 * FPS)
+        
+        first_third = np.ceil(np.linspace(0, new_tot // 3, num=90) + math.ceil(10 * FPS))
+
+        second_third = np.ceil(np.linspace(new_tot//3, new_tot, num=90) + math.ceil(10 * FPS))
+
+        return ret + list(first_third) + list(second_third)
 
     def __getitem__(self, idx):
         with torch.no_grad():
@@ -212,8 +223,45 @@ class TextDataset(Dataset):
             out_kwargs = {}
             out_kwargs['input_ids'] = np.array(self.text_datasets['train'][idx]['input_ids'])
             out_kwargs['input_mask'] = np.array(self.text_datasets['train'][idx]['input_mask'])
+        
+        if self.text_datasets['train'][idx]["video_path"] != self.video_container_path:
+        
+            self.video_container = cv2.VideoCapture(self.text_datasets['train'][idx]["video_path"])
+            self.video_container_path = self.text_datasets['train'][idx]["video_path"]
 
-            return arr, out_kwargs
+        FPS = self.video_container.get(cv2.CAP_PROP_FPS)
+
+        sentence_start_frame = math.ceil(self.text_datasets['train'][idx]["start"] * FPS)
+
+        if sentence_start_frame < 230:
+            num_copies = 230//sentence_start_frame
+
+            left_over = 230 % sentence_start_frame
+
+            indicies = [0]*(num_copies + left_over)
+
+            for i in range(1, sentence_start_frame):
+                indicies += [i]*num_copies
+
+        elif sentence_start_frame < FPS * 60:
+            indicies = list(np.linspace(0, sentence_start_frame, num=230))
+        else:
+            indicies = self.sample_frame_indices(sentence_start_frame, FPS)
+
+        indicies = [sentence_start_frame-x for x in indicies][::-1]
+
+        frames = []
+
+        for index in indicies:
+            self.video_container.set(cv2.CAP_PROP_POS_FRAMES, index)
+
+            _, frame = self.video_container.read()
+
+            frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+        out_kwargs["video"] = frames
+
+        return arr, out_kwargs
 
 def _collate_batch_helper(examples, pad_token_id, max_length, return_mask=False):
     result = torch.full([len(examples), max_length], pad_token_id, dtype=torch.int64).tolist()
