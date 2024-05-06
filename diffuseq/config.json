@@ -1,7 +1,7 @@
 {
   "lr": 0.0001,
-  "batch_size": 2048,
-  "microbatch": 64,
+  "batch_size": 1,
+  "microbatch": 1,
   "learning_steps": 320000,
   "log_interval": 20,
   "save_interval": 40000,
@@ -15,7 +15,7 @@
   "vocab": "bert",
   "use_plm_init": "no",
   "vocab_size": 0,
-  "config_name": "huggingface-config",
+  "config_name": "allenai/longformer-base-4096",
   "notes": "folder-notes",
   "data_dir": "data-dir",
   "dataset": "dataset-name",
@@ -35,5 +35,7 @@
   "rescale_timesteps": true,
   "rescale_learned_sigmas": false,
   "sigma_small": false,
-  "emb_scale_factor": 1.0
+  "emb_scale_factor": 1.0,
+  "data_folder": "/home/cometku/code/model-godcaster/sample",
+  "vivit_model" : "google/vivit-b-16x2-kinetics400"
 }
