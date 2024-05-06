@@ -101,13 +101,14 @@ def load_defaults_config():
     """
     Load defaults for training args.
     """
-    with open('diffuseq/config.json', 'r') as f:
+    with open('/home/cometku/code/model-godcaster/DiffuSeq/diffuseq/config.json', 'r') as f:
         return json.load(f)
 
 
 def create_model_and_diffusion(
     hidden_t_dim,
     hidden_dim,
+    video_shape,
     vocab_size,
     config_name,
     use_plm_init,
@@ -128,6 +129,7 @@ def create_model_and_diffusion(
         input_dims=hidden_dim,
         output_dims=(hidden_dim if not learn_sigma else hidden_dim*2),
         hidden_t_dim=hidden_t_dim,
+        video_shape = video_shape,
         dropout=dropout,
         config_name=config_name,
         vocab_size=vocab_size,
