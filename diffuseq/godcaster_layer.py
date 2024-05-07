@@ -43,7 +43,6 @@ class GodCasterLayer(nn.Module):
             attention_mask,
             head_mask,
             output_attentions=output_attentions,
-            past_key_value=self_attn_past_key_value,
         )
         attention_output = self_attention_outputs[0]
 
