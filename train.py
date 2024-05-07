@@ -35,7 +35,7 @@ def create_argparser():
 def main():
     args = create_argparser().parse_args()
     set_seed(args.seed) 
-    dist_util.setup_dist()
+    # dist_util.setup_dist()
     logger.configure()
     logger.log("### Creating data loader...")
 
@@ -50,18 +50,21 @@ def main():
         loaded_vocab=tokenizer,
         model_emb=model_weight # use model's weights as init
     )
-    # next(data)
+    
+    next(data)
 
-    data_valid = load_data_text(
-        batch_size=args.batch_size,
-        seq_len=args.seq_len,
-        data_args=args,
-        folder = args.data_folder,
-        split='valid',
-        deterministic=True,
-        loaded_vocab=tokenizer,
-        model_emb=model_weight # using the same embedding wight with tranining data
-    )
+    # data_valid = load_data_text(
+    #     batch_size=args.batch_size,
+    #     seq_len=args.seq_len,
+    #     data_args=args,
+    #     folder = args.data_folder,
+    #     split='valid',
+    #     deterministic=True,
+    #     loaded_vocab=tokenizer,
+    #     model_emb=model_weight # using the same embedding wight with tranining data
+    # )
+
+    data_valid = None
 
     print('#'*30, 'size of vocab', args.vocab_size)
 
