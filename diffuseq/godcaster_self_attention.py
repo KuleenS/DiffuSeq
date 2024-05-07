@@ -61,7 +61,15 @@ class GodCasterSelfAttention(nn.Module):
             - 0: local attention
             - +10000: global attention
         """
+        if attention_mask is None:
+            attention_mask = torch.ones(hidden_states.shape[:2]).to(hidden_states)
+
+        if is_index_masked is None:
+            is_index_masked = attention_mask < 0
+        
         hidden_states = hidden_states.transpose(0, 1)
+
+        video = video.transpose(0, 1)
 
         # project hidden states
         query_vectors = self.query(hidden_states)
