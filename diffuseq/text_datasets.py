@@ -55,14 +55,14 @@ def load_data_text(
     )
 
     if split != 'test':
-        sampler = DistributedSampler(dataset)
+        # sampler = DistributedSampler(dataset)
         data_loader = DataLoader(
             dataset,
             batch_size=batch_size,  # 20,
             # drop_last=True,
-            sampler=sampler,
-            # shuffle=not deterministic,
-            # num_workers=4,
+            # sampler=sampler,
+            shuffle=False,
+            num_workers=4,
         )
     else:
         data_loader = DataLoader(
@@ -70,8 +70,8 @@ def load_data_text(
             batch_size=batch_size,  # 20,
             # drop_last=True,
             # sampler=sampler,
-            shuffle=not deterministic,
-            # num_workers=4,
+            shuffle=False,
+            num_workers=4,
         )
 
     if loop:
@@ -193,6 +193,7 @@ class TextDataset(Dataset):
         self.model_emb = model_emb
 
         self.video_container = None
+
         self.video_container_path = None
 
     def __len__(self):
@@ -224,8 +225,7 @@ class TextDataset(Dataset):
             out_kwargs['input_ids'] = np.array(self.text_datasets['train'][idx]['input_ids'])
             out_kwargs['attention_mask'] = np.array(self.text_datasets['train'][idx]['attention_mask'])
         
-        if self.text_datasets['train'][idx]["video_path"] != self.video_container_path:
-        
+        if self.video_container_path != self.text_datasets['train'][idx]["video_path"]:
             self.video_container = av.open(self.text_datasets['train'][idx]["video_path"])
             self.video_container_path = self.text_datasets['train'][idx]["video_path"]
 
@@ -263,6 +263,9 @@ class TextDataset(Dataset):
                 break
             if i >= start_index and i in indicies:
                 frames.append(frame)
+
+        if len(frames) != 32:
+            frames += [frames[-1]]*(32 - len(frames))
 
         out_kwargs["video"] = np.stack([x.to_ndarray(format="rgb24") for x in frames])
 
