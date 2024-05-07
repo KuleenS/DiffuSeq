@@ -144,7 +144,7 @@ def main():
 
         input_ids_x = cond.pop('input_ids').to(dist_util.dev())
         x_start = model.get_embeds(input_ids_x)
-        input_ids_mask = cond.pop('input_mask')
+        input_ids_mask = cond.pop('attention_mask')
         input_ids_mask_ori = input_ids_mask
 
         noise = th.randn_like(x_start)

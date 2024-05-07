@@ -124,7 +124,7 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
             lst.append(src + [vocab_dict.sep_token_id] + trg)
             mask.append([0]*(len(src)+1))
         group_lst['input_ids'] = lst
-        group_lst['input_mask'] = mask
+        group_lst['attention_mask'] = mask
         return group_lst
     
     tokenized_datasets = tokenized_datasets.map(
@@ -136,7 +136,7 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     def pad_function(group_lst):
         max_length = seq_len
         group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], vocab_dict.pad_token_id, max_length)
-        group_lst['input_mask'] = _collate_batch_helper(group_lst['input_mask'], 1, max_length)
+        group_lst['attention_mask'] = _collate_batch_helper(group_lst['attention_mask'], 1, max_length)
         return group_lst
 
     lm_datasets = tokenized_datasets.map(
@@ -222,7 +222,7 @@ class TextDataset(Dataset):
 
             out_kwargs = {}
             out_kwargs['input_ids'] = np.array(self.text_datasets['train'][idx]['input_ids'])
-            out_kwargs['input_mask'] = np.array(self.text_datasets['train'][idx]['input_mask'])
+            out_kwargs['attention_mask'] = np.array(self.text_datasets['train'][idx]['attention_mask'])
         
         if self.text_datasets['train'][idx]["video_path"] != self.video_container_path:
         
