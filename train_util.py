@@ -184,9 +184,13 @@ class TrainLoop:
 
             inputs = self.vivit_processor(list(video_frames), return_tensors="pt").to("cuda:1")
 
-            outputs = self.vivit_model(**inputs)
+            outputs = self.vivit_model(**inputs).last_hidden_state
 
-            cond["video"] = outputs.last_hidden_state.to("cuda:0")
+            padding = th.zeros(outputs.shape[0], 4096-outputs.shape[1], outputs.shape[2]).to("cuda:1")
+
+            outputs = th.concat([outputs, padding], axis=1)
+
+            cond["video"] = outputs.to("cuda:0")
 
             self.run_step(batch, cond)
             if self.step % self.log_interval == 0:
