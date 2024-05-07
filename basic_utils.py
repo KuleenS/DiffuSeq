@@ -36,10 +36,9 @@ class myTokenizer():
             self.sep_token_id = vocab_dict['[END]']
             self.pad_token_id = vocab_dict['[PAD]']
             # save
-            if int(os.environ['LOCAL_RANK']) == 0:
-                path_save_vocab = f'{args.checkpoint_path}/vocab.json'
-                with open(path_save_vocab, 'w') as f:
-                    json.dump(vocab_dict, f)
+            path_save_vocab = f'{args.checkpoint_path}/vocab.json'
+            with open(path_save_vocab, 'w') as f:
+                json.dump(vocab_dict, f)
                 
         self.vocab_size = len(self.tokenizer)
         args.vocab_size = self.vocab_size # update vocab size in args
@@ -74,23 +73,18 @@ def load_model_emb(args, tokenizer):
     model = torch.nn.Embedding(tokenizer.vocab_size, args.hidden_dim)
     path_save = '{}/random_emb.torch'.format(args.checkpoint_path)
     path_save_ind = path_save + ".done"
-    if int(os.environ['LOCAL_RANK']) == 0:
-        if os.path.exists(path_save):
-            print('reload the random embeddings', model)
-            model.load_state_dict(torch.load(path_save))
-        else:
-            print('initializing the random embeddings', model)
-            torch.nn.init.normal_(model.weight)
-            torch.save(model.state_dict(), path_save)
-            os.sync()
-            with open(path_save_ind, "x") as _:
-                pass
-    else:
-        while not os.path.exists(path_save_ind):
-            time.sleep(1)
+    
+    if os.path.exists(path_save):
         print('reload the random embeddings', model)
         model.load_state_dict(torch.load(path_save))
-
+    else:
+        print('initializing the random embeddings', model)
+        torch.nn.init.normal_(model.weight)
+        torch.save(model.state_dict(), path_save)
+        os.sync()
+        with open(path_save_ind, "x") as _:
+            pass
+    
     return model, tokenizer
 
 
