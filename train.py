@@ -21,6 +21,8 @@ from transformers import set_seed
 from transformers import VivitImageProcessor, VivitModel, VivitConfig
 import wandb
 
+from TubeViT.tubevit.model import TubeViTLightningModule
+
 ### custom your wandb setting here ###
 # os.environ["WANDB_API_KEY"] = ""
 os.environ["WANDB_MODE"] = "offline"
@@ -75,6 +77,19 @@ def main():
     vivit_config = VivitConfig.from_pretrained(args.vivit_model)
 
     vivit_model = VivitModel(config=vivit_config).to("cuda:1")
+
+    tubevit = TubeViTLightningModule(
+        num_classes=2,
+        video_shape = [32, 1080, 1080, 3],
+        num_layers=12,
+        num_heads=12,
+        hidden_dim=768,
+        mlp_dim=3072,
+        lr=args.lr,
+        weight_decay=0.001,
+        # weight_path="tubevit_b_(a+iv)+(d+v)+(e+iv)+(f+v).pt",
+        max_epochs=10
+    ).to("cuda:1")
 
     # print('#'*30, 'CUDA_VISIBLE_DEVICES', os.environ['CUDA_VISIBLE_DEVICES'])
 
@@ -132,7 +147,8 @@ def main():
         checkpoint_path=args.checkpoint_path,
         gradient_clipping=args.gradient_clipping,
         eval_data=data_valid,
-        eval_interval=args.eval_interval
+        eval_interval=args.eval_interval,
+        tubevit=tubevit
     ).run_loop()
 
 if __name__ == "__main__":

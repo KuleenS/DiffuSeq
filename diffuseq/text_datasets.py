@@ -268,6 +268,7 @@ class TextDataset(Dataset):
             frames += [frames[-1]]*(32 - len(frames))
 
         out_kwargs["video"] = np.stack([x.to_ndarray(format="rgb24") for x in frames])
+        print(f"out_kwargs shape {out_kwargs['video'].shape}")
 
         return arr, out_kwargs
 
