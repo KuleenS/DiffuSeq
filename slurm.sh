@@ -1,15 +1,15 @@
 #!/bin/bash
 #
-#SBATCH --job-name=3vidstubevit
-#SBATCH --output=out.3vidstubevit.log
-#SBATCH --error=err.3vidstubevit.log
+#SBATCH --job-name=100vidstubevit
+#SBATCH --output=out.100vidstubevit.log
+#SBATCH --error=err.100vidstubevit.log
 #
 # Number of tasks needed for this job. Generally, used with MPI jobs
 #SBATCH --ntasks=1
 #SBATCH --partition=parallel
 #
 # Time format = HH:MM:SS, DD-HH:MM:SS
-#SBATCH --time=240:00:00
+#SBATCH --time=168:00:00
 #
 # Minimum memory required per allocated  CPU  in  MegaBytes.
 #SBATCH --mem-per-cpu=48000

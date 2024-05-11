@@ -42,8 +42,8 @@ def main():
     args.batch_size = 1
     args.microbatch = 1
 
-    args.learning_steps = 1000
-    args.data_folder = "/scratch/kxu39/3videos"
+    # args.learning_steps = 1000
+    # args.data_folder = "/scratch/kxu39/3videos"
 
     print(f"args: {args}")
     # dist_util.setup_dist()
