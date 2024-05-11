@@ -233,10 +233,11 @@ class TextDataset(Dataset):
 
         sentence_start_frame = math.ceil(self.text_datasets['train'][idx]["start"] * FPS)
 
-        if sentence_start_frame < 32:
-            num_copies = 32//sentence_start_frame
+        num_frames = 180
+        if sentence_start_frame < num_frames:
+            num_copies = num_frames//sentence_start_frame
 
-            left_over = 32 % sentence_start_frame
+            left_over = num_frames % sentence_start_frame
 
             indicies = [0]*(num_copies + left_over)
 
@@ -244,7 +245,7 @@ class TextDataset(Dataset):
                 indicies += [i]*num_copies
 
         elif sentence_start_frame < FPS * 60:
-            indicies = list(np.ceil(np.linspace(0, sentence_start_frame, num=32)))
+            indicies = list(np.ceil(np.linspace(0, sentence_start_frame, num=num_frames)))
         else:
             indicies = np.ceil(self.sample_frame_indices(sentence_start_frame, FPS))
 
@@ -264,11 +265,10 @@ class TextDataset(Dataset):
             if i >= start_index and i in indicies:
                 frames.append(frame)
 
-        if len(frames) != 32:
-            frames += [frames[-1]]*(32 - len(frames))
+        if len(frames) != num_frames:
+            frames += [frames[-1]]*(num_frames - len(frames))
 
         out_kwargs["video"] = np.stack([x.to_ndarray(format="rgb24") for x in frames])
-        # print(f"out_kwargs shape {out_kwargs['video'].shape}")
 
         return arr, out_kwargs
 

@@ -167,7 +167,7 @@ class TrainLoop:
             video_frames = cond["video"].cpu()
             transforms = T.Compose([
                 ToTensorVideo(),
-                T.Resize([1080, 1080])
+                T.Resize([720, 720])
             ])
             transformed_videos = th.stack([transforms(video) for video in video_frames])
             # video_frames = transforms(cond["video"])
@@ -195,12 +195,16 @@ class TrainLoop:
                 logger.dumpkvs()
             if self.step > 0 and self.step % self.save_interval == 0:
                 self.save()
+                th.save(self.tubevit, "tubevit.pt")
+                th.save(self.tubevit_reducer, "tubevit_reducer.pt")
                 # Run for a finite amount of time in integration tests.
                 if os.environ.get("DIFFUSION_TRAINING_TEST", "") and self.step > 0:
                     return
             self.step += 1
         # Save the last checkpoint if it wasn't already saved.
         if (self.step - 1) % self.save_interval != 0:
+            th.save(self.tubevit, "tubevit.pt")
+            th.save(self.tubevit_reducer, "tubevit_reducer.pt")
             self.save()
 
     def run_step(self, batch, cond):

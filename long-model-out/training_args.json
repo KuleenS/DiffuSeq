@@ -1,6 +1,6 @@
 {
   "lr": 4e-05,
-  "batch_size": 4,
+  "batch_size": 1,
   "microbatch": 4,
   "learning_steps": 10000,
   "log_interval": 20,

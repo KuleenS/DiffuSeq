@@ -39,6 +39,8 @@ def main():
     load_dotenv()
     args = create_argparser().parse_args()
     set_seed(args.seed) 
+    args.batch_size = 1
+    print(f"args: {args}")
     # dist_util.setup_dist()
     logger.configure()
     logger.log("### Creating data loader...")
@@ -74,20 +76,24 @@ def main():
 
     logger.log("### Creating model and diffusion...")
 
+    num_frames = 200
     tubevit = TubeViTLightningModule(
         num_classes=2,
-        video_shape = [32, 1080, 1080, 3],
+        video_shape = [num_frames, 720, 720, 3],
         num_layers=12,
         num_heads=12,
         hidden_dim=768,
         mlp_dim=3072,
         lr=args.lr,
         weight_decay=0.001,
-        # weight_path="tubevit_b_(a+iv)+(d+v)+(e+iv)+(f+v).pt",
+        weight_path="init_tubevit.pt",
         max_epochs=10
     ).to("cuda:1")
 
-    tubevit_reducer = nn.Linear(12448, 4096).to("cuda:1")
+    tubevit_reducer = nn.Linear(38061, 4096).to("cuda:1")
+    # load tubevit reducer if tubevit_reducer.pt exists
+    if os.path.exists("tubevit_reducer.pt"):
+        tubevit_reducer.load_state_dict(torch.load("tubevit_reducer.pt"))
 
     # print('#'*30, 'CUDA_VISIBLE_DEVICES', os.environ['CUDA_VISIBLE_DEVICES'])
 

@@ -11,3 +11,4 @@ venv
 err.tubevit.log
 out.tubevit.log
 .env
+init_tubevit.pt
