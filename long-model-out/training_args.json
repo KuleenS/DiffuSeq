@@ -36,6 +36,6 @@
   "rescale_learned_sigmas": false,
   "sigma_small": false,
   "emb_scale_factor": 1.0,
-  "data_folder": "/scratch/kxu39/100videos",
+  "data_folder": "/scratch/kxu39/3videos",
   "vivit_model": "google/vivit-b-16x2-kinetics400"
 }

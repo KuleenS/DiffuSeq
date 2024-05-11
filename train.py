@@ -40,6 +40,7 @@ def main():
     args = create_argparser().parse_args()
     set_seed(args.seed) 
     args.batch_size = 1
+    args.data_folder = "/scratch/kxu39/3videos"
     print(f"args: {args}")
     # dist_util.setup_dist()
     logger.configure()
@@ -90,7 +91,7 @@ def main():
         max_epochs=10
     ).to("cuda:1")
 
-    tubevit_reducer = nn.Linear(38061, 4096).to("cuda:1")
+    tubevit_reducer = nn.Linear(43744, 4096).to("cuda:1")
     # load tubevit reducer if tubevit_reducer.pt exists
     if os.path.exists("tubevit_reducer.pt"):
         tubevit_reducer.load_state_dict(torch.load("tubevit_reducer.pt"))

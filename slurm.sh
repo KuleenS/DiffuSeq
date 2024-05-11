@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-#SBATCH --job-name=tubevit
-#SBATCH --output=out.tubevit.log
-#SBATCH --error=err.tubevit.log
+#SBATCH --job-name=3vidstubevit
+#SBATCH --output=out.3vidstubevit.log
+#SBATCH --error=err.3vidstubevit.log
 #
 # Number of tasks needed for this job. Generally, used with MPI jobs
 #SBATCH --ntasks=1

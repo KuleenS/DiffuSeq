@@ -233,7 +233,7 @@ class TextDataset(Dataset):
 
         sentence_start_frame = math.ceil(self.text_datasets['train'][idx]["start"] * FPS)
 
-        num_frames = 180
+        num_frames = 200
         if sentence_start_frame < num_frames:
             num_copies = num_frames//sentence_start_frame
 
