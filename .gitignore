@@ -8,3 +8,6 @@ generation_outputs/*
 *.log
 *.pth
 venv
+err.tubevit.log
+out.tubevit.log
+.env

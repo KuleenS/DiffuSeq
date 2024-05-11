@@ -21,11 +21,13 @@ from transformers import set_seed
 from transformers import VivitImageProcessor, VivitModel, VivitConfig
 import wandb
 
+from dotenv import load_dotenv
 from TubeViT.tubevit.model import TubeViTLightningModule
+import torch.nn as nn
 
 ### custom your wandb setting here ###
 # os.environ["WANDB_API_KEY"] = ""
-os.environ["WANDB_MODE"] = "offline"
+# os.environ["WANDB_MODE"] = "offline"
 
 def create_argparser():
     defaults = dict()
@@ -35,6 +37,7 @@ def create_argparser():
     return parser
 
 def main():
+    load_dotenv()
     args = create_argparser().parse_args()
     set_seed(args.seed) 
     # dist_util.setup_dist()
@@ -91,13 +94,17 @@ def main():
         max_epochs=10
     ).to("cuda:1")
 
+    tubevit_reducer = nn.Linear(12448, 4096).to("cuda:1")
+
     # print('#'*30, 'CUDA_VISIBLE_DEVICES', os.environ['CUDA_VISIBLE_DEVICES'])
 
     model_diffusion_args = args_to_dict(args, load_defaults_config().keys())
 
     seq_len = (32 // vivit_model.config.tubelet_size[0]) * (224 // vivit_model.config.tubelet_size[1]) * (224 // vivit_model.config.tubelet_size[2])
+    print(f"seq_len {seq_len}")
 
     model_diffusion_args["video_shape"] = [seq_len, vivit_model.config.hidden_size]
+    print(f"model diff vid shape {model_diffusion_args['video_shape']}")
 
     model, diffusion = create_model_and_diffusion(
         **model_diffusion_args
@@ -148,7 +155,8 @@ def main():
         gradient_clipping=args.gradient_clipping,
         eval_data=data_valid,
         eval_interval=args.eval_interval,
-        tubevit=tubevit
+        tubevit=tubevit,
+        tubevit_reducer=tubevit_reducer
     ).run_loop()
 
 if __name__ == "__main__":

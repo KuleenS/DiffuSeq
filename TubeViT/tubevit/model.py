@@ -182,6 +182,7 @@ class TubeViT(nn.Module):
 
         heads_layers: OrderedDict[str, nn.Module] = OrderedDict()
         if representation_size is None:
+            print(f"hidden dim {self.hidden_dim}")
             heads_layers["head"] = nn.Linear(self.hidden_dim, self.num_classes)
         else:
             heads_layers["pre_logits"] = nn.Linear(self.hidden_dim, representation_size)
@@ -201,6 +202,8 @@ class TubeViT(nn.Module):
         x = x + self.pos_embedding
 
         x = self.encoder(x)
+
+        return x
 
         # Attention pooling
         x = self.attention_pooling(x)
