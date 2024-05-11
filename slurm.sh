@@ -9,7 +9,7 @@
 #SBATCH --partition=parallel
 #
 # Time format = HH:MM:SS, DD-HH:MM:SS
-#SBATCH --time=144:00:00
+#SBATCH --time=240:00:00
 #
 # Minimum memory required per allocated  CPU  in  MegaBytes.
 #SBATCH --mem-per-cpu=48000

@@ -40,7 +40,11 @@ def main():
     args = create_argparser().parse_args()
     set_seed(args.seed) 
     args.batch_size = 1
+    args.microbatch = 1
+
+    args.learning_steps = 1000
     args.data_folder = "/scratch/kxu39/3videos"
+
     print(f"args: {args}")
     # dist_util.setup_dist()
     logger.configure()
