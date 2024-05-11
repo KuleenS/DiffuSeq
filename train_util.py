@@ -36,8 +36,8 @@ class TrainLoop:
         *,
         model,
         diffusion,
-        vivit_processor,
-        vivit_model,
+        tubevit,
+        tubevit_reducer,
         data,
         batch_size,
         microbatch,
@@ -54,14 +54,10 @@ class TrainLoop:
         checkpoint_path='',
         gradient_clipping=-1.,
         eval_data=None,
-        eval_interval=-1,
-        tubevit=None,
-        tubevit_reducer=None
+        eval_interval=-1
     ):
         self.model = model
         self.diffusion = diffusion
-        self.vivit_processor = vivit_processor
-        self.vivit_model = vivit_model
         self.tubevit = tubevit
         self.tubevit_reducer = tubevit_reducer
         self.data = data
@@ -168,36 +164,25 @@ class TrainLoop:
             batch, cond = next(self.data)
             # print(f"cond shape {cond['video'].shape}")
 
-            if self.tubevit is None:
-                video_frames = cond["video"].squeeze().numpy().astype(np.uint8)
-
-                inputs = self.vivit_processor([list(x) for x in video_frames], return_tensors="pt").to("cuda:1")
-
-                outputs = self.vivit_model(**inputs).last_hidden_state
-
-                padding = th.zeros(outputs.shape[0], 4096-outputs.shape[1], outputs.shape[2]).to("cuda:1")
-
-                outputs = th.concat([outputs, padding], axis=1)
-            else:
-                video_frames = cond["video"].cpu()
-                transforms = T.Compose([
-                    ToTensorVideo(),
-                    T.Resize([1080, 1080])
-                ])
-                transformed_videos = th.stack([transforms(video) for video in video_frames])
-                # video_frames = transforms(cond["video"])
-                video_frames = transformed_videos.to("cuda:1")
-                # print(f"video_frames shape {video_frames.shape[1:]}")
-                outputs = self.tubevit(video_frames).to("cuda:1")
-                # print(f"pre reducer outputs shape, {outputs.shape}")
-                outputs = outputs.transpose(1, 2)
-                outputs = self.tubevit_reducer(outputs)
-                outputs = outputs.transpose(1, 2)
-                # print(f"post reducer outputs shape, {outputs.shape}")
-                # padding = th.zeros(outputs.shape[0], 4096-outputs.shape[1], outputs.shape[2]).to("cuda:1")
-                # print(f"padding size {padding.size}")
-                # outputs = th.concat([outputs, padding], axis=1)
-                # print(f"new outputs shape, {outputs.shape}")
+            video_frames = cond["video"].cpu()
+            transforms = T.Compose([
+                ToTensorVideo(),
+                T.Resize([1080, 1080])
+            ])
+            transformed_videos = th.stack([transforms(video) for video in video_frames])
+            # video_frames = transforms(cond["video"])
+            video_frames = transformed_videos.to("cuda:1")
+            # print(f"video_frames shape {video_frames.shape[1:]}")
+            outputs = self.tubevit(video_frames).to("cuda:1")
+            # print(f"pre reducer outputs shape, {outputs.shape}")
+            outputs = outputs.transpose(1, 2)
+            outputs = self.tubevit_reducer(outputs)
+            outputs = outputs.transpose(1, 2)
+            # print(f"post reducer outputs shape, {outputs.shape}")
+            # padding = th.zeros(outputs.shape[0], 4096-outputs.shape[1], outputs.shape[2]).to("cuda:1")
+            # print(f"padding size {padding.size}")
+            # outputs = th.concat([outputs, padding], axis=1)
+            # print(f"new outputs shape, {outputs.shape}")
 
             cond["video"] = outputs.to("cuda:0")
 

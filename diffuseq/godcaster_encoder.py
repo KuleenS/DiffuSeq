@@ -8,11 +8,10 @@ from transformers.modeling_outputs import BaseModelOutputWithPastAndCrossAttenti
 from .godcaster_layer import GodCasterLayer
 
 class GodCasterEncoder(nn.Module):
-    def __init__(self, config, video_shape):
+    def __init__(self, config):
         super().__init__()
         self.config = config
-        self.video_shape = video_shape
-        self.layer = nn.ModuleList([GodCasterLayer(config, layer_id = i, video_shape=self.video_shape) for i in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([GodCasterLayer(config, layer_id = i) for i in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
     def forward(

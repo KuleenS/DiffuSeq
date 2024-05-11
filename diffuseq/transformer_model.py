@@ -34,7 +34,6 @@ class TransformerNetModel(nn.Module):
         input_dims,
         output_dims,
         hidden_t_dim,
-        video_shape,
         dropout=0,
         config=None,
         config_name='allenai/longformer-base-4096',
@@ -55,8 +54,6 @@ class TransformerNetModel(nn.Module):
         self.logits_mode = logits_mode
         self.hidden_size = config.hidden_size
 
-        self.video_shape = video_shape
-
         self.word_embedding = nn.Embedding(vocab_size, self.input_dims)
         self.lm_head = nn.Linear(self.input_dims, vocab_size)
         with th.no_grad():
@@ -73,7 +70,7 @@ class TransformerNetModel(nn.Module):
             self.input_up_proj = nn.Sequential(nn.Linear(input_dims, config.hidden_size),
                                               nn.Tanh(), nn.Linear(config.hidden_size, config.hidden_size))
         
-        self.input_transformers = GodCasterEncoder(config, self.video_shape)
+        self.input_transformers = GodCasterEncoder(config)
 
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)

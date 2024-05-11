@@ -4,9 +4,8 @@ import torch.nn as nn
 from transformers.activations import ACT2FN
 
 class GodCasterIntermediate(nn.Module):
-    def __init__(self, config, video_shape):
+    def __init__(self, config):
         super().__init__()
-        self.video_shape = video_shape
         self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]

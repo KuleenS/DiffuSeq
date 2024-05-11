@@ -18,7 +18,6 @@ from basic_utils import (
 )
 from train_util import TrainLoop
 from transformers import set_seed
-from transformers import VivitImageProcessor, VivitModel, VivitConfig
 import wandb
 
 from dotenv import load_dotenv
@@ -75,12 +74,6 @@ def main():
 
     logger.log("### Creating model and diffusion...")
 
-    vivit_processor = VivitImageProcessor.from_pretrained(args.vivit_model)
-
-    vivit_config = VivitConfig.from_pretrained(args.vivit_model)
-
-    vivit_model = VivitModel(config=vivit_config).to("cuda:1")
-
     tubevit = TubeViTLightningModule(
         num_classes=2,
         video_shape = [32, 1080, 1080, 3],
@@ -99,12 +92,6 @@ def main():
     # print('#'*30, 'CUDA_VISIBLE_DEVICES', os.environ['CUDA_VISIBLE_DEVICES'])
 
     model_diffusion_args = args_to_dict(args, load_defaults_config().keys())
-
-    seq_len = (32 // vivit_model.config.tubelet_size[0]) * (224 // vivit_model.config.tubelet_size[1]) * (224 // vivit_model.config.tubelet_size[2])
-    print(f"seq_len {seq_len}")
-
-    model_diffusion_args["video_shape"] = [seq_len, vivit_model.config.hidden_size]
-    print(f"model diff vid shape {model_diffusion_args['video_shape']}")
 
     model, diffusion = create_model_and_diffusion(
         **model_diffusion_args
@@ -136,8 +123,6 @@ def main():
     TrainLoop(
         model=model,
         diffusion=diffusion,
-        vivit_processor = vivit_processor,
-        vivit_model = vivit_model,
         data=data,
         batch_size=args.batch_size,
         microbatch=args.microbatch,

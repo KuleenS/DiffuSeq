@@ -12,17 +12,16 @@ from .godcaster_intermediate import GodCasterIntermediate
 
 
 class GodCasterLayer(nn.Module):
-    def __init__(self, config, layer_id, video_shape):
+    def __init__(self, config, layer_id):
         super().__init__()
-        self.video_shape = video_shape
         self.layer_id = layer_id
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
-        self.attention = GodCasterSelfAttention(config, self.layer_id, self.video_shape)
+        self.attention = GodCasterSelfAttention(config, self.layer_id)
         self.is_decoder = config.is_decoder
         self.add_cross_attention = config.add_cross_attention
-        self.intermediate = GodCasterIntermediate(config, self.video_shape)
-        self.output = GodCasterOutput(config, self.video_shape)
+        self.intermediate = GodCasterIntermediate(config)
+        self.output = GodCasterOutput(config)
 
     def forward(
         self,

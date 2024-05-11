@@ -4,26 +4,25 @@ import torch
 from torch import nn
 
 class GodCasterSelfAttention(nn.Module):
-    def __init__(self, config, layer_id, video_shape):
+    def __init__(self, config, layer_id):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0:
             raise ValueError(
                 f"The hidden size ({config.hidden_size}) is not a multiple of the number of attention "
                 f"heads ({config.num_attention_heads})"
             )
-        self.video_shape = video_shape
         self.num_heads = config.num_attention_heads
         self.head_dim = int(config.hidden_size / config.num_attention_heads)
         self.embed_dim = config.hidden_size
 
         self.query = nn.Linear(config.hidden_size, self.embed_dim)
-        self.key = nn.Linear(self.video_shape[1], self.embed_dim)
-        self.value = nn.Linear(self.video_shape[1], self.embed_dim)
+        self.key = nn.Linear(self.embed_dim, self.embed_dim)
+        self.value = nn.Linear(self.embed_dim, self.embed_dim)
 
         # separate projection layers for tokens with global attention
         self.query_global = nn.Linear(config.hidden_size, self.embed_dim)
-        self.key_global = nn.Linear(self.video_shape[1], self.embed_dim)
-        self.value_global = nn.Linear(self.video_shape[1], self.embed_dim)
+        self.key_global = nn.Linear(self.embed_dim, self.embed_dim)
+        self.value_global = nn.Linear(self.embed_dim, self.embed_dim)
 
         self.dropout = config.attention_probs_dropout_prob
 
